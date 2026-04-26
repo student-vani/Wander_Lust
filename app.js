@@ -46,13 +46,13 @@ const sessionOptions = {
   secret : process.env.SESSION_SECRET || "thisismysecretkey",
   resave : false,
   saveUninitialized : false,
-  // store sessions in MongoDB so they survive server restarts
   store : MongoStore.create({
     mongoUrl : process.env.MONGO_URL,
-    touchAfter : 24 * 60 * 60, // only update session once per 24 hours unless data changes
+    touchAfter : 24 * 60 * 60,
+    mongooseConnection: mongoose.connection,
   }),
   cookie : {
-    maxAge : 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+    maxAge : 7 * 24 * 60 * 60 * 1000,
     httpOnly : true,
   }
 };
@@ -72,9 +72,9 @@ passport.serializeUser(User.serializeUser());
 passport.deserializeUser(User.deserializeUser());
 
 app.use((req, res, next) => {
-  res.locals.success = req.flash("success"); // this will create a success message for each user
-  res.locals.error = req.flash("error"); // this will create an error message for each user
-  res.locals.currUser = req.user; // make current user available in all templates
+  res.locals.success = req.flash("success");
+  res.locals.error = req.flash("error");
+  res.locals.currUser = req.user || null; // always set, never undefined
   next();
 });
 
@@ -100,10 +100,11 @@ app.all("*", (req, res, next) => {
 
 app.use((err, req, res, next) => {
   // error handling middleware
-  console.log(err.name);
+  console.log("ERROR NAME:", err.name);
+  console.log("ERROR MESSAGE:", err.message);
+  console.log("ERROR STACK:", err.stack);
   let { statusCode = 500, message = "Something went wrong" } = err;
   res.status(statusCode).render("error.ejs", { message });
-  // res.status(statusCode).send(message);
 });
 
 app.listen(port, () => {
